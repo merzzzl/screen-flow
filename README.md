@@ -32,29 +32,19 @@ type text, verify that the screen stopped changing …* — all from pure Go.
 
 ## 🗂  Step catalogue
 
-| Step builder                     | Purpose                                    |
-| -------------------------------- | ------------------------------------------ |
-| `ActionTapXY(x, y)`              | tap absolute coordinates                   |
-| `ActionSwipe(x1, y1, x2, y2)`    | swipe from A to B                          |
-| `ActionKeyboard(keys, dur)`      | press keycodes for `dur`                   |
-| `ActionSetClipboard(str, paste)` | set / paste clipboard                      |
-| `ActionType(str)`                | type UTF‑8 text                            |
-| `ActionTapImage(img)`            | locate `img` on screen and tap centre      |
-| `ActionSwipeImage(img, h, w)`    | swipe gesture based on image anchor        |
-| `WaitStaticFrame(th)`            | wait until successive frames differ `< th` |
-| `ActionFunc(fn)`                 | run custom Go callback                     |
-
-*Every step accepts optional modifiers:*
-
-```go
-OptionDelayBefore(d)        // sleep d before step
-OptionDelayAfter(d)
-OptionTriggerBefor(img, r)  // wait until template is found
-OptionTriggerAfer(img, r)
-```
-
-- `img` – any `image.Image`
-- `r` – optional search rectangle
+| Step                                           | Description                                |
+| ---------------------------------------------- | ------------------------------------------ |
+| `ActionTapXY(x, y)`                            | Tap at absolute coordinates                |
+| `ActionSwipe(x1, y1, x2, y2)`                  | Swipe from point A to B                    |
+| `ActionKeyboard(keys, dur)`                    | Press keycodes with duration               |
+| `ActionSetClipboard(str, paste)`               | Set clipboard text and optionally paste it |
+| `ActionType(str)`                              | Type UTF‑8 string text                     |
+| `ActionTapImage(img, wait, area, dur)`         | Wait for image on screen and tap center    |
+| `ActionSwipeImage(img, h, w, wait, area, dur)` | Swipe from image anchor (H,W offset)       |
+| `WaitStaticFrame(threshold)`                   | Wait until screen becomes still            |
+| `ActionWait(img, area, dur)`                   | Wait until image appears on screen         |
+| `ActionDelay(dur)`                             | Sleep for duration                         |
+| `ActionFunc(fn)`                               | Execute custom Go callback                 |
 
 ## 🚀  Getting started
 
