@@ -35,7 +35,7 @@ func main() {
 	eCh := make(chan *events.Base, 1)
 
 	go func() {
-		state, err := screenflow.NewFlow("127.0.0.1:10000", sCh, eCh).
+		flow := screenflow.NewFlow("127.0.0.1:10000", sCh, eCh).
 			ActionTapImage(chromeImage, true, nil, nil).
 			WaitStaticFrame(0.05).
 			ActionTapImage(searchImage, true, nil, nil).
@@ -43,8 +43,14 @@ func main() {
 			ActionWait(enterImage, nil, nil).
 			ActionType("Hello, world!").
 			ActionTapImage(enterImage, true, nil, nil).
-			ActionDelay(time.Second * 2).
-			Run(context.Background())
+			ActionDelay(time.Second * 2)
+
+		s, _ := flow.ToYAML()
+		_ = flow.FromYAML(s)
+
+		log.Println(s)
+
+		state, err := flow.Run(context.Background())
 		if err != nil {
 			log.Printf("run flow: %v", err)
 		}
