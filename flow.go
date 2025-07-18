@@ -44,6 +44,12 @@ func NewFlow(address string, s chan<- image.Image, e chan<- *events.Base) *Flow 
 	}
 }
 
+func (f *Flow) Load(steps []FlowStep) *Flow {
+	f.steps = append(f.steps, steps...)
+
+	return f
+}
+
 func (f *Flow) Run(ctx context.Context) (*FlowState, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -117,77 +123,89 @@ func (a *customAction) Handle(conn *device.Conn) error {
 	return nil
 }
 
-func (f *Flow) ActionTapXY(x, y int) *Flow {
-	action := actions.ActionTapXY{
+func ActionTapXY(x, y int) FlowStep {
+	return &actions.ActionTapXY{
 		X: x,
 		Y: y,
 	}
+}
 
-	f.steps = append(f.steps, &action)
+func (f *Flow) ActionTapXY(x, y int) *Flow {
+	f.steps = append(f.steps, ActionTapXY(x, y))
 
 	return f
 }
 
-func (f *Flow) ActionSwipe(x1, y1, x2, y2 int) *Flow {
-	action := actions.ActionSwipe{
+func ActionSwipe(x1, y1, x2, y2 int) FlowStep {
+	return &actions.ActionSwipe{
 		X1: x1,
 		Y1: y1,
 		X2: x2,
 		Y2: y2,
 	}
+}
 
-	f.steps = append(f.steps, &action)
+func (f *Flow) ActionSwipe(x1, y1, x2, y2 int) *Flow {
+	f.steps = append(f.steps, ActionSwipe(x1, y1, x2, y2))
 
 	return f
 }
 
-func (f *Flow) ActionSetClipboard(payload string, past bool) *Flow {
-	action := actions.ActionSetClipboard{
+func ActionSetClipboard(payload string, past bool) FlowStep {
+	return &actions.ActionSetClipboard{
 		Payload: payload,
 		Past:    past,
 	}
+}
 
-	f.steps = append(f.steps, &action)
+func (f *Flow) ActionSetClipboard(payload string, past bool) *Flow {
+	f.steps = append(f.steps, ActionSetClipboard(payload, past))
 
 	return f
+}
+
+func ActionType(payload string) FlowStep {
+	return &actions.ActionType{
+		Payload: payload,
+	}
 }
 
 func (f *Flow) ActionType(payload string) *Flow {
-	action := actions.ActionType{
-		Payload: payload,
-	}
-
-	f.steps = append(f.steps, &action)
+	f.steps = append(f.steps, ActionType(payload))
 
 	return f
 }
 
-func (f *Flow) ActionKeyboard(keys []int, duration time.Duration) *Flow {
-	action := actions.ActionKeyboard{
+func ActionKeyboard(keys []int, duration time.Duration) FlowStep {
+	return &actions.ActionKeyboard{
 		Press:    keys,
 		Duration: duration,
 	}
+}
 
-	f.steps = append(f.steps, &action)
+func (f *Flow) ActionKeyboard(keys []int, duration time.Duration) *Flow {
+	f.steps = append(f.steps, ActionKeyboard(keys, duration))
 
 	return f
 }
 
-func (f *Flow) ActionTapImage(img image.Image, wait bool, area *image.Rectangle, dur *time.Duration) *Flow {
-	action := actions.ActionTapImage{
+func ActionTapImage(img image.Image, wait bool, area *image.Rectangle, dur *time.Duration) FlowStep {
+	return &actions.ActionTapImage{
 		ImageTemplate: img,
 		Duration:      dur,
 		SearchArea:    area,
 		Wait:          wait,
 	}
+}
 
-	f.steps = append(f.steps, &action)
+func (f *Flow) ActionTapImage(img image.Image, wait bool, area *image.Rectangle, dur *time.Duration) *Flow {
+	f.steps = append(f.steps, ActionTapImage(img, wait, area, dur))
 
 	return f
 }
 
-func (f *Flow) ActionSwipeImage(img image.Image, h, w int, wait bool, area *image.Rectangle, dur *time.Duration) *Flow {
-	action := actions.StepActionSwipeImage{
+func ActionSwipeImage(img image.Image, h, w int, wait bool, area *image.Rectangle, dur *time.Duration) FlowStep {
+	return &actions.StepActionSwipeImage{
 		ImageTemplate: img,
 		H:             h,
 		W:             w,
@@ -195,46 +213,58 @@ func (f *Flow) ActionSwipeImage(img image.Image, h, w int, wait bool, area *imag
 		SearchArea:    area,
 		Wait:          wait,
 	}
+}
 
-	f.steps = append(f.steps, &action)
+func (f *Flow) ActionSwipeImage(img image.Image, h, w int, wait bool, area *image.Rectangle, dur *time.Duration) *Flow {
+	f.steps = append(f.steps, ActionSwipeImage(img, h, w, wait, area, dur))
 
 	return f
+}
+
+func ActionFunc(fn func(conn *device.Conn) error) FlowStep {
+	return &customAction{handler: fn}
 }
 
 func (f *Flow) ActionFunc(fn func(conn *device.Conn) error) *Flow {
-	f.steps = append(f.steps, &customAction{handler: fn})
+	f.steps = append(f.steps, ActionFunc(fn))
 
 	return f
+}
+
+func WaitStaticFrame(threshold float64) FlowStep {
+	return &actions.ActionWaitStaticFrame{
+		Threshold: threshold,
+	}
 }
 
 func (f *Flow) WaitStaticFrame(threshold float64) *Flow {
-	action := actions.ActionWaitStaticFrame{
-		Threshold: threshold,
-	}
-
-	f.steps = append(f.steps, &action)
+	f.steps = append(f.steps, WaitStaticFrame(threshold))
 
 	return f
 }
 
-func (f *Flow) ActionWait(img image.Image, area *image.Rectangle, dur *time.Duration) *Flow {
-	action := actions.ActionWait{
+func ActionWait(img image.Image, area *image.Rectangle, dur *time.Duration) FlowStep {
+	return &actions.ActionWait{
 		ImageTemplate: img,
 		SearchArea:    area,
 		Duration:      dur,
 	}
+}
 
-	f.steps = append(f.steps, &action)
+func (f *Flow) ActionWait(img image.Image, area *image.Rectangle, dur *time.Duration) *Flow {
+	f.steps = append(f.steps, ActionWait(img, area, dur))
 
 	return f
 }
 
-func (f *Flow) ActionDelay(dur time.Duration) *Flow {
-	action := actions.ActionDelay{
+func ActionDelay(dur time.Duration) FlowStep {
+	return &actions.ActionDelay{
 		Duration: dur,
 	}
+}
 
-	f.steps = append(f.steps, &action)
+func (f *Flow) ActionDelay(dur time.Duration) *Flow {
+	f.steps = append(f.steps, ActionDelay(dur))
 
 	return f
 }
