@@ -1,4 +1,4 @@
-package control
+package device
 
 import (
 	"bufio"
@@ -8,13 +8,15 @@ import (
 	"image/jpeg"
 	"io"
 	"os/exec"
+
+	"github.com/merzzzl/screen-flow/utils"
 )
 
 type Decoder struct {
 	cmd     *exec.Cmd
 	stdin   io.WriteCloser
 	decoder *bufio.Reader
-	image   image.Image
+	streams *utils.Broadcaster[image.Image]
 }
 
 const imgsep = 0xFF
@@ -45,6 +47,7 @@ func NewDecoder() (*Decoder, error) {
 		cmd:     cmd,
 		stdin:   stdin,
 		decoder: bufio.NewReader(stdout),
+		streams: utils.NewBroadcaster[image.Image](),
 	}, nil
 }
 
@@ -52,6 +55,10 @@ func (d *Decoder) Decode(frame []byte) error {
 	_, err := d.stdin.Write(frame)
 
 	return err
+}
+
+func (d *Decoder) Subscribe() <-chan image.Image {
+	return d.streams.Subscribe()
 }
 
 func (d *Decoder) Looper(ctx context.Context) error {
@@ -105,14 +112,10 @@ func (d *Decoder) Looper(ctx context.Context) error {
 			return err
 		}
 
-		d.image = img
+		d.streams.Broadcast(img)
 	}
 
 	return nil
-}
-
-func (d *Decoder) Image() image.Image {
-	return d.image
 }
 
 func (d *Decoder) Close() {

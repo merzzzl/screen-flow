@@ -38,7 +38,7 @@ func FindPoint(source, template image.Image) (image.Point, bool, error) {
 
 	points := sourceObj.findTopKMatchesInImage(templateObj)
 
-	if len(points) == 0 {
+	if len(points) < 5 {
 		return image.Pt(0, 0), false, nil
 	}
 
@@ -64,57 +64,3 @@ func FindPoint(source, template image.Image) (image.Point, bool, error) {
 
 	return abs, true, nil
 }
-
-// func saveTempResult(sourceObj *object, good, bad []image.Point, avg image.Point) error {
-// 	mat := sourceObj.getMat()
-// 	name := "_temp.jpeg"
-
-// 	for _, point := range good {
-// 		drowPoint(&mat, point, color.RGBA{255, 0, 255, 32})
-// 	}
-
-// 	for _, point := range bad {
-// 		drowPoint(&mat, point, color.RGBA{0, 0, 255, 32})
-// 	}
-
-// 	drowPoint(&mat, avg, color.RGBA{0, 255, 0, 255})
-
-// 	return saveMat(&mat, name)
-// }
-
-// func drowPoint(mat *gocv.Mat, point image.Point, cl color.RGBA) {
-// 	if point.X > 0 && point.Y > 0 {
-// 		startH := image.Pt(point.X-20, point.Y)
-// 		endH := image.Pt(point.X+20, point.Y)
-
-// 		_ = gocv.Line(mat, startH, endH, cl, 4)
-
-// 		startV := image.Pt(point.X, point.Y-20)
-// 		endV := image.Pt(point.X, point.Y+20)
-
-// 		_ = gocv.Line(mat, startV, endV, cl, 4)
-// 	}
-// }
-
-// func saveMat(mat *gocv.Mat, path string) error {
-// 	img, err := mat.ToImage()
-// 	if err != nil {
-// 		return fmt.Errorf("convert mat: %w", err)
-// 	}
-
-// 	out, err := os.Create(path)
-// 	if err != nil {
-// 		return fmt.Errorf("create file: %w", err)
-// 	}
-
-// 	err = jpeg.Encode(out, img, &jpeg.Options{Quality: 95})
-// 	if err != nil {
-// 		return fmt.Errorf("encode image: %w", err)
-// 	}
-
-// 	if err := out.Close(); err != nil {
-// 		return fmt.Errorf("close file: %w", err)
-// 	}
-
-// 	return nil
-// }

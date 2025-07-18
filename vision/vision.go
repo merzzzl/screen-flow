@@ -49,10 +49,6 @@ func toMat(img image.Image) (gocv.Mat, error) {
 	return rgb, nil
 }
 
-func (o *object) getMat() gocv.Mat {
-	return o.raw
-}
-
 func (o *object) close() {
 	_ = o.raw.Close()
 	_ = o.sfit.Close()
