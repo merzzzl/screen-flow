@@ -18,7 +18,7 @@ type Conn struct {
 	vision    *vision.Pipe
 }
 
-func Connect(ctx context.Context, addr string, window vision.Window) (*Conn, error) {
+func Connect(ctx context.Context, addr string, algo vision.Algorithm, window vision.Window) (*Conn, error) {
 	conn := &Conn{
 		clipboard: make(chan string, 1),
 	}
@@ -53,7 +53,7 @@ func Connect(ctx context.Context, addr string, window vision.Window) (*Conn, err
 	})
 
 	handshake := client.GetHandshake()
-	vpipe := vision.NewPipe(dec, int(handshake.Width), int(handshake.Height), vision.AlgorithmTM, window)
+	vpipe := vision.NewPipe(dec, int(handshake.Width), int(handshake.Height), algo, window)
 
 	go func() {
 		_ = client.Serve(ctx)

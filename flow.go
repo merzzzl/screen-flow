@@ -46,11 +46,11 @@ func (f *Flow) Load(steps []FlowStep) *Flow {
 	return f
 }
 
-func (f *Flow) Run(ctx context.Context, window vision.Window) (*FlowState, error) {
+func (f *Flow) Run(ctx context.Context, alg vision.Algorithm, window vision.Window) (*FlowState, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := device.Connect(ctx, f.address, window)
+	conn, err := device.Connect(ctx, f.address, alg, window)
 	if err != nil {
 		return nil, fmt.Errorf("connect to device: %w", err)
 	}

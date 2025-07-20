@@ -27,10 +27,6 @@ type Window interface {
 }
 
 func NewPipe(stream io.Reader, w, h int, algo Algorithm, window Window) *Pipe {
-	if window != nil {
-		window.Resize(w, h)
-	}
-
 	return &Pipe{
 		r:       stream,
 		w:       w,
@@ -69,8 +65,11 @@ func (p *Pipe) Process(ctx context.Context) error {
 			return fmt.Errorf("convert to mat: %w", err)
 		}
 
+		nextSrc, scale := resizeSrc(next)
+		_ = next.Close()
+
 		if prev != nil {
-			change := calcChangeRatio(*prev, next)
+			change := calcChangeRatio(*prev, nextSrc)
 
 			if change < 0.10 {
 				static++
@@ -85,22 +84,28 @@ func (p *Pipe) Process(ctx context.Context) error {
 			_ = prev.Close()
 		}
 
-		prev = &next
+		prev = &nextSrc
 
-		var (
-			goodPoint image.Point
-			allPoints []image.Point
-		)
+		var res *Result
 
 		if tmpl := p.tmpl.Load(); static > 30 && tmpl != nil {
-			var ok bool
+			var (
+				ok    bool
+				point image.Point
+			)
 
-			goodPoint, allPoints, ok = findPoint(next, *tmpl, p.algo)
+			tpl := resizeTpl(*tmpl, scale)
+			res, ok = findPoint(nextSrc, tpl, p.algo)
+			_ = tpl.Close()
 
-			if ok && lastPoint != nil && lastPoint.X == goodPoint.X && lastPoint.Y == goodPoint.Y {
+			if ok {
+				point = restorePoint(res.best, scale)
+			}
+
+			if ok && lastPoint != nil && lastPoint.X == point.X && lastPoint.Y == point.Y {
 				if p.success.Load() >= 5 {
 					select {
-					case p.point <- goodPoint:
+					case p.point <- point:
 					default:
 					}
 				} else {
@@ -111,12 +116,16 @@ func (p *Pipe) Process(ctx context.Context) error {
 			}
 
 			if ok {
-				lastPoint = &goodPoint
+				lastPoint = &point
 			}
 		}
 
 		if p.window != nil {
-			p.showImage(next, goodPoint, allPoints)
+			p.showImage(*prev, res)
+		}
+
+		if res != nil {
+			res.Close()
 		}
 	}
 

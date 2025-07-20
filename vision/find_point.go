@@ -3,6 +3,7 @@ package vision
 import (
 	"image"
 	"sort"
+	"time"
 
 	"gocv.io/x/gocv"
 )
@@ -12,12 +13,36 @@ type Algorithm int
 const (
 	AlgorithmSIFT = iota
 	AlgorithmTM
+	AlgorithmORB
+	AlgorithmAKAZE
+	AlgorithmBRISK
+	AlgorithmFAST
+	AlgorithmKAZE
+	AlgorithmSURF
+	AlgorithmAGAST
+	AlgorithmGFTT
+	AlgorithmBRIEF
 )
 
-func findPointSIFT(src, tpl gocv.Mat) (image.Point, []image.Point, bool) {
+type Result struct {
+	matches []gocv.DMatch
+	dur     time.Duration
+	algo    Algorithm
+	src     gocv.Mat
+	tpl     gocv.Mat
+	kpSrc   []gocv.KeyPoint
+	kpTpl   []gocv.KeyPoint
+	descSrc gocv.Mat
+	descTpl gocv.Mat
+	best    image.Point
+}
+
+func findPoint(src, tpl gocv.Mat, algo Algorithm) (*Result, bool) {
 	if src.Empty() || tpl.Empty() {
-		return image.Point{}, nil, false
+		return nil, false
 	}
+
+	startTime := time.Now()
 
 	srcGray := gocv.NewMat()
 	tplGray := gocv.NewMat()
@@ -37,21 +62,61 @@ func findPointSIFT(src, tpl gocv.Mat) (image.Point, []image.Point, bool) {
 		tplGray = tpl.Clone()
 	}
 
-	sift := gocv.NewSIFT()
-	defer sift.Close()
+	var (
+		kpSrc, kpTpl     []gocv.KeyPoint
+		descSrc, descTpl gocv.Mat
+	)
 
-	kpSrc, descSrc := sift.DetectAndCompute(srcGray, gocv.NewMat())
-	_, descTpl := sift.DetectAndCompute(tplGray, gocv.NewMat())
+	switch algo {
+	case AlgorithmTM:
+		pt, ok := findPointTM(srcGray, tplGray)
+
+		return &Result{
+			algo:    algo,
+			best:    pt,
+			src:     src.Clone(),
+			tpl:     tpl.Clone(),
+			kpSrc:   []gocv.KeyPoint{},
+			kpTpl:   []gocv.KeyPoint{},
+			descSrc: gocv.NewMat(),
+			descTpl: gocv.NewMat(),
+			dur:     time.Since(startTime),
+			matches: []gocv.DMatch{},
+		}, ok
+	case AlgorithmSIFT:
+		kpSrc, kpTpl, descSrc, descTpl = dSIFT(srcGray, tplGray)
+	case AlgorithmORB:
+		kpSrc, kpTpl, descSrc, descTpl = dORB(srcGray, tplGray)
+	case AlgorithmAKAZE:
+		kpSrc, kpTpl, descSrc, descTpl = dAKAZE(srcGray, tplGray)
+	case AlgorithmBRISK:
+		kpSrc, kpTpl, descSrc, descTpl = dBRISK(srcGray, tplGray)
+	case AlgorithmFAST:
+		kpSrc, kpTpl, descSrc, descTpl = dFAST(srcGray, tplGray)
+	case AlgorithmKAZE:
+		kpSrc, kpTpl, descSrc, descTpl = dKAZE(srcGray, tplGray)
+	case AlgorithmSURF:
+		kpSrc, kpTpl, descSrc, descTpl = dSURF(srcGray, tplGray)
+	case AlgorithmAGAST:
+		kpSrc, kpTpl, descSrc, descTpl = dAGAST(srcGray, tplGray)
+	case AlgorithmGFTT:
+		kpSrc, kpTpl, descSrc, descTpl = dGFTT(srcGray, tplGray)
+	case AlgorithmBRIEF:
+		kpSrc, kpTpl, descSrc, descTpl = dBRIEF(srcGray, tplGray)
+	}
+
+	defer descSrc.Close()
+	defer descTpl.Close()
 
 	if descSrc.Empty() || descTpl.Empty() {
-		return image.Point{}, nil, false
+		return nil, false
 	}
 
 	matcher := gocv.NewBFMatcherWithParams(gocv.NormL2, false)
 	defer matcher.Close()
 
 	knn := matcher.KnnMatch(descTpl, descSrc, 2)
-
+	_ = kpTpl
 	good := make([]gocv.DMatch, 0, len(knn))
 
 	for _, m := range knn {
@@ -61,7 +126,7 @@ func findPointSIFT(src, tpl gocv.Mat) (image.Point, []image.Point, bool) {
 	}
 
 	if len(good) == 0 {
-		return image.Point{}, nil, false
+		return nil, false
 	}
 
 	sort.Slice(good, func(i, j int) bool { return good[i].Distance < good[j].Distance })
@@ -77,32 +142,20 @@ func findPointSIFT(src, tpl gocv.Mat) (image.Point, []image.Point, bool) {
 		pts[i] = image.Pt(int(float64(p.X)), int(float64(p.Y)+0.5))
 	}
 
-	return pts[0], pts, true
+	return &Result{
+		algo:    algo,
+		src:     src.Clone(),
+		tpl:     tpl.Clone(),
+		kpSrc:   kpSrc,
+		kpTpl:   kpTpl,
+		descSrc: descSrc.Clone(),
+		descTpl: descTpl.Clone(),
+		dur:     time.Since(startTime),
+		matches: good,
+	}, true
 }
 
-func findPointTM(src, tpl gocv.Mat) (image.Point, []image.Point, bool) {
-	if src.Empty() || tpl.Empty() {
-		return image.Point{}, nil, false
-	}
-
-	srcGray := gocv.NewMat()
-	tplGray := gocv.NewMat()
-
-	defer srcGray.Close()
-	defer tplGray.Close()
-
-	if src.Channels() == 3 {
-		gocv.CvtColor(src, &srcGray, gocv.ColorBGRToGray)
-	} else {
-		srcGray = src.Clone()
-	}
-
-	if tpl.Channels() == 3 {
-		gocv.CvtColor(tpl, &tplGray, gocv.ColorBGRToGray)
-	} else {
-		tplGray = tpl.Clone()
-	}
-
+func findPointTM(srcGray, tplGray gocv.Mat) (image.Point, bool) {
 	res := gocv.NewMatWithSize(srcGray.Rows()-tplGray.Rows()+1, srcGray.Cols()-tplGray.Cols()+1, gocv.MatTypeCV32F)
 	defer res.Close()
 
@@ -111,67 +164,12 @@ func findPointTM(src, tpl gocv.Mat) (image.Point, []image.Point, bool) {
 	_, maxVal, _, maxLoc := gocv.MinMaxLoc(res)
 	center := image.Point{X: maxLoc.X + tplGray.Cols()/2, Y: maxLoc.Y + tplGray.Rows()/2}
 
-	return center, []image.Point{center}, maxVal > 0.75
+	return center, maxVal > 0.75
 }
 
-func findPoint(src, tpl gocv.Mat, algo Algorithm) (image.Point, []image.Point, bool) {
-	if src.Empty() || tpl.Empty() {
-		return image.Point{}, nil, false
-	}
-
-	var fn func(src gocv.Mat, tpl gocv.Mat) (image.Point, []image.Point, bool)
-
-	switch algo {
-	case AlgorithmSIFT:
-		fn = findPointSIFT
-	case AlgorithmTM:
-		fn = findPointTM
-	default:
-		return image.Point{}, nil, false
-	}
-
-	maxSide := src.Cols()
-
-	if src.Rows() > maxSide {
-		maxSide = src.Rows()
-	}
-
-	if maxSide <= 640 {
-		return fn(src, tpl)
-	}
-
-	scale := float64(640) / float64(maxSide)
-
-	newW := int(float64(src.Cols()) * scale)
-	newH := int(float64(src.Rows()) * scale)
-
-	dstSrc := gocv.NewMat()
-	defer dstSrc.Close()
-
-	gocv.Resize(src, &dstSrc, image.Pt(newW, newH), 0, 0, gocv.InterpolationLinear)
-
-	tW := int(float64(tpl.Cols()) * scale)
-	tH := int(float64(tpl.Rows()) * scale)
-
-	dstTpl := gocv.NewMat()
-	defer dstTpl.Close()
-
-	gocv.Resize(tpl, &dstTpl, image.Pt(tW, tH), 0, 0, gocv.InterpolationLinear)
-
-	pt, pts, ok := fn(dstSrc, dstTpl)
-	if !ok {
-		return image.Point{}, nil, false
-	}
-
-	inv := 1 / scale
-
-	pt.X = int(float64(pt.X) * inv)
-	pt.Y = int(float64(pt.Y) * inv)
-
-	for i := range pts {
-		pts[i].X = int(float64(pts[i].X) * inv)
-		pts[i].Y = int(float64(pts[i].Y) * inv)
-	}
-
-	return pt, pts, true
+func (r *Result) Close() {
+	_ = r.descSrc.Close()
+	_ = r.descTpl.Close()
+	_ = r.src.Close()
+	_ = r.tpl.Close()
 }

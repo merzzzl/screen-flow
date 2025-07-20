@@ -11,6 +11,7 @@ import (
 	"time"
 
 	screenflow "github.com/merzzzl/screen-flow"
+	"github.com/merzzzl/screen-flow/vision"
 	"gocv.io/x/gocv"
 )
 
@@ -52,7 +53,7 @@ func main() {
 	defer cancel()
 
 	go func() {
-		state, err := flow.Run(ctx, window)
+		state, err := flow.Run(ctx, vision.AlgorithmSIFT, window)
 		if err != nil {
 			log.Printf("run flow: %v", err)
 		}
@@ -100,8 +101,8 @@ func initWindow() *faceWindow {
 }
 
 func (fw *faceWindow) Resize(x, y int) {
-	fw.w = x / 2
-	fw.h = y / 2
+	fw.w = x
+	fw.h = y
 
 	fw.resize <- struct{}{}
 }
