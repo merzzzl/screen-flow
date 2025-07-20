@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/merzzzl/screen-flow/device"
-	"github.com/merzzzl/screen-flow/events"
-	"github.com/merzzzl/screen-flow/vision"
 )
 
 type ActionTapImage struct {
@@ -21,35 +19,27 @@ func (s *ActionTapImage) Handle(conn *device.Conn) error {
 	startAt := time.Now()
 
 	for {
-		source := conn.GetScreenImage()
-
-		point, ok, err := vision.FindPoint(source, s.ImageTemplate)
+		point, err := conn.FindPoint(s.ImageTemplate)
 		if err != nil {
 			return fmt.Errorf("find point: %w", err)
 		}
 
-		if ok {
-			if s.SearchArea == nil {
-				conn.BroadcastEvent(events.NewFoundImageEvent(point.X, point.Y))
-
-				nextStep := ActionTapXY{
-					X: point.X,
-					Y: point.Y,
-				}
-
-				return nextStep.Handle(conn)
+		if s.SearchArea == nil {
+			nextStep := ActionTapXY{
+				X: point.X,
+				Y: point.Y,
 			}
 
-			if point.In(*s.SearchArea) {
-				conn.BroadcastEvent(events.NewFoundImageEvent(point.X, point.Y))
+			return nextStep.Handle(conn)
+		}
 
-				nextStep := ActionTapXY{
-					X: point.X,
-					Y: point.Y,
-				}
-
-				return nextStep.Handle(conn)
+		if point.In(*s.SearchArea) {
+			nextStep := ActionTapXY{
+				X: point.X,
+				Y: point.Y,
 			}
+
+			return nextStep.Handle(conn)
 		}
 
 		if s.Duration != nil {

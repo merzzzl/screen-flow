@@ -9,14 +9,12 @@ import (
 	"github.com/merzzzl/scrcpy-go"
 	"github.com/merzzzl/screen-flow/actions"
 	"github.com/merzzzl/screen-flow/device"
-	"github.com/merzzzl/screen-flow/events"
+	"github.com/merzzzl/screen-flow/vision"
 )
 
 type Flow struct {
 	address string
 	steps   []FlowStep
-	stream  chan<- image.Image
-	events  chan<- *events.Base
 }
 
 type FlowState struct {
@@ -35,12 +33,10 @@ type customAction struct {
 	handler func(conn *device.Conn) error
 }
 
-func NewFlow(address string, s chan<- image.Image, e chan<- *events.Base) *Flow {
+func NewFlow(address string) *Flow {
 	return &Flow{
 		address: address,
 		steps:   make([]FlowStep, 0),
-		stream:  s,
-		events:  e,
 	}
 }
 
@@ -50,11 +46,11 @@ func (f *Flow) Load(steps []FlowStep) *Flow {
 	return f
 }
 
-func (f *Flow) Run(ctx context.Context) (*FlowState, error) {
+func (f *Flow) Run(ctx context.Context, window vision.Window) (*FlowState, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := device.Connect(ctx, f.address)
+	conn, err := device.Connect(ctx, f.address, window)
 	if err != nil {
 		return nil, fmt.Errorf("connect to device: %w", err)
 	}
@@ -68,36 +64,6 @@ func (f *Flow) Run(ctx context.Context) (*FlowState, error) {
 	defer func() {
 		state.EndAt = time.Now()
 	}()
-
-	if f.stream != nil {
-		streamCh := conn.GetScreenStream()
-
-		go func() {
-			for ctx.Err() == nil {
-				select {
-				case <-ctx.Done():
-					return
-				case img := <-streamCh:
-					f.stream <- img
-				}
-			}
-		}()
-	}
-
-	if f.stream != nil {
-		eventCh := conn.GetEventStream()
-
-		go func() {
-			for ctx.Err() == nil {
-				select {
-				case <-ctx.Done():
-					return
-				case ev := <-eventCh:
-					f.events <- ev
-				}
-			}
-		}()
-	}
 
 	for i, step := range f.steps {
 		if ctx.Err() != nil {
@@ -227,18 +193,6 @@ func ActionFunc(fn func(conn *device.Conn) error) FlowStep {
 
 func (f *Flow) ActionFunc(fn func(conn *device.Conn) error) *Flow {
 	f.steps = append(f.steps, ActionFunc(fn))
-
-	return f
-}
-
-func WaitStaticFrame(threshold float64) FlowStep {
-	return &actions.ActionWaitStaticFrame{
-		Threshold: threshold,
-	}
-}
-
-func (f *Flow) WaitStaticFrame(threshold float64) *Flow {
-	f.steps = append(f.steps, WaitStaticFrame(threshold))
 
 	return f
 }

@@ -133,9 +133,6 @@ func (f *Flow) ToYAML() (string, error) {
 				Area:     area,
 			}
 
-		case *actions.ActionWaitStaticFrame:
-			out[i] = stepYAML{Type: "wait_static_frame", Threshold: v.Threshold}
-
 		case *actions.ActionDelay:
 			out[i] = stepYAML{Type: "delay", Duration: &v.Duration}
 
@@ -225,9 +222,6 @@ func (f *Flow) FromYAML(s string) error {
 
 			dur := r.Duration
 			steps[i] = ActionWait(img, area, dur)
-
-		case "wait_static_frame":
-			steps[i] = WaitStaticFrame(r.Threshold)
 
 		case "delay":
 			steps[i] = ActionDelay(*r.Duration)

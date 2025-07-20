@@ -6,7 +6,6 @@ import (
 
 	scrcpy "github.com/merzzzl/scrcpy-go"
 	"github.com/merzzzl/screen-flow/device"
-	"github.com/merzzzl/screen-flow/events"
 )
 
 type ActionTapXY struct {
@@ -35,8 +34,6 @@ func (s *ActionTapXY) Handle(conn *device.Conn) error {
 		65535, scrcpy.ButtonPrimary, 0); err != nil {
 		return fmt.Errorf("inject action: %w", err)
 	}
-
-	conn.BroadcastEvent(events.NewTouchEvent(s.X, s.Y))
 
 	return nil
 }

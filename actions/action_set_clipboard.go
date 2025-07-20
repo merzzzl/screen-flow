@@ -1,8 +1,9 @@
 package actions
 
 import (
+	"fmt"
+
 	"github.com/merzzzl/screen-flow/device"
-	"github.com/merzzzl/screen-flow/events"
 )
 
 type ActionSetClipboard struct {
@@ -12,11 +13,7 @@ type ActionSetClipboard struct {
 
 func (s *ActionSetClipboard) Handle(conn *device.Conn) error {
 	if err := conn.SetClipboard(0, s.Payload, s.Past); err != nil {
-		return err
-	}
-
-	if s.Past {
-		conn.BroadcastEvent(events.NewPastTextEvent(s.Payload))
+		return fmt.Errorf("inject action: %w", err)
 	}
 
 	return nil

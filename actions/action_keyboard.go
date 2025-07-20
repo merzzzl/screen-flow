@@ -6,7 +6,6 @@ import (
 
 	scrcpy "github.com/merzzzl/scrcpy-go"
 	"github.com/merzzzl/screen-flow/device"
-	"github.com/merzzzl/screen-flow/events"
 )
 
 type ActionKeyboard struct {
@@ -28,8 +27,6 @@ func (s *ActionKeyboard) Handle(conn *device.Conn) error {
 			}
 		}
 	}
-
-	conn.BroadcastEvent(events.NewPressKeyEvent(s.Press))
 
 	return nil
 }

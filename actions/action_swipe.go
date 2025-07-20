@@ -6,7 +6,6 @@ import (
 
 	scrcpy "github.com/merzzzl/scrcpy-go"
 	"github.com/merzzzl/screen-flow/device"
-	"github.com/merzzzl/screen-flow/events"
 )
 
 type ActionSwipe struct {
@@ -24,8 +23,6 @@ func (s *ActionSwipe) Handle(conn *device.Conn) error {
 		65535, scrcpy.ButtonPrimary, scrcpy.ButtonPrimary); err != nil {
 		return fmt.Errorf("inject action: %w", err)
 	}
-
-	conn.BroadcastEvent(events.NewTouchEvent(s.X1, s.Y1))
 
 	if s.Duration == 0 {
 		s.Duration = 200 * time.Millisecond
@@ -47,8 +44,6 @@ func (s *ActionSwipe) Handle(conn *device.Conn) error {
 			65535, 0, scrcpy.ButtonPrimary); err != nil {
 			return fmt.Errorf("inject action: %w", err)
 		}
-
-		conn.BroadcastEvent(events.NewTouchEvent(currentX, currentY))
 	}
 
 	if err := conn.InjectTouch(
@@ -57,8 +52,6 @@ func (s *ActionSwipe) Handle(conn *device.Conn) error {
 		65535, scrcpy.ButtonPrimary, 0); err != nil {
 		return fmt.Errorf("inject action: %w", err)
 	}
-
-	conn.BroadcastEvent(events.NewTouchEvent(s.X2, s.Y2))
 
 	return nil
 }
