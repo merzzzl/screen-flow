@@ -51,6 +51,8 @@ type text, verify that the screen stopped changing …* — all from pure Go.
 2) Clone project
 3) Run exampe flow ```go run cmd/*```
 
+![screenshot](README.png)
+
 > Don’t forget to launch `scrcpy-server` (see `scrcpy-go make run`)
 > so `screen‑flow` can connect to **tcp:10000**.
 

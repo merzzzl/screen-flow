@@ -82,25 +82,37 @@ func loadimage(file string) (image.Image, error) {
 }
 
 type faceWindow struct {
-	resize chan image.Rectangle
+	resize chan any
 	show   chan gocv.Mat
 	window gocv.Window
+	w      int
+	h      int
 }
 
 func initWindow() *faceWindow {
+	win := gocv.NewWindow("screen-flow")
+
 	return &faceWindow{
-		resize: make(chan image.Rectangle, 1),
+		resize: make(chan any, 1),
 		show:   make(chan gocv.Mat, 1),
-		window: *gocv.NewWindow("screen-flow"),
+		window: *win,
 	}
 }
 
 func (fw *faceWindow) Resize(x, y int) {
-	fw.resize <- image.Rect(0, 0, x, y)
+	fw.w = x / 2
+	fw.h = y / 2
+
+	fw.resize <- struct{}{}
 }
 
 func (fw *faceWindow) Show(img gocv.Mat) {
-	fw.show <- img.Clone()
+	dstSrc := gocv.NewMat()
+	defer dstSrc.Close()
+
+	gocv.Resize(img, &dstSrc, image.Pt(fw.w, fw.h), 0, 0, gocv.InterpolationLinear)
+
+	fw.show <- dstSrc.Clone()
 }
 
 func (fw *faceWindow) Handler(ctx context.Context) error {
@@ -110,14 +122,16 @@ func (fw *faceWindow) Handler(ctx context.Context) error {
 
 	for ctx.Err() == nil {
 		select {
-		case rec := <-fw.resize:
-			if err := fw.window.ResizeWindow(rec.Max.X, rec.Max.Y); err != nil {
+		case <-fw.resize:
+			if err := fw.window.ResizeWindow(fw.w, fw.h); err != nil {
 				return err
 			}
 		case img := <-fw.show:
 			if err := fw.window.IMShow(img); err != nil {
 				return err
 			}
+
+			_ = img.Close()
 		default:
 			key := fw.window.WaitKey(1)
 			if key == 'q' {
