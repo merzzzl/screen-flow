@@ -41,7 +41,6 @@ type text, verify that the screen stopped changing …* — all from pure Go.
 | `ActionType(str)`                              | Type UTF‑8 string text                     |
 | `ActionTapImage(img, wait, area, dur)`         | Wait for image on screen and tap center    |
 | `ActionSwipeImage(img, h, w, wait, area, dur)` | Swipe from image anchor (H,W offset)       |
-| `WaitStaticFrame(threshold)`                   | Wait until screen becomes still            |
 | `ActionWait(img, area, dur)`                   | Wait until image appears on screen         |
 | `ActionDelay(dur)`                             | Sleep for duration                         |
 | `ActionFunc(fn)`                               | Execute custom Go callback                 |
