@@ -152,6 +152,7 @@ func findPoint(src, tpl gocv.Mat, algo Algorithm) (*Result, bool) {
 		descTpl: descTpl.Clone(),
 		dur:     time.Since(startTime),
 		matches: good,
+		best:    pts[0],
 	}, true
 }
 
