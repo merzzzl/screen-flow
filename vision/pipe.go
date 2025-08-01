@@ -11,7 +11,6 @@ import (
 )
 
 type Pipe struct {
-	window  Window
 	tmpl    atomic.Pointer[gocv.Mat]
 	success atomic.Uint32
 	point   chan image.Point
@@ -21,12 +20,7 @@ type Pipe struct {
 	w       int
 }
 
-type Window interface {
-	Resize(width int, height int)
-	Show(img gocv.Mat)
-}
-
-func NewPipe(stream io.Reader, w, h int, algo Algorithm, window Window) *Pipe {
+func NewPipe(stream io.Reader, w, h int, algo Algorithm) *Pipe {
 	return &Pipe{
 		r:       stream,
 		w:       w,
@@ -34,7 +28,6 @@ func NewPipe(stream io.Reader, w, h int, algo Algorithm, window Window) *Pipe {
 		point:   make(chan image.Point),
 		tmpl:    atomic.Pointer[gocv.Mat]{},
 		success: atomic.Uint32{},
-		window:  window,
 		algo:    algo,
 	}
 }
@@ -120,10 +113,6 @@ func (p *Pipe) Process(ctx context.Context) error {
 			}
 		}
 
-		if p.window != nil {
-			p.showImage(*prev, res)
-		}
-
 		if res != nil {
 			res.Close()
 		}
@@ -132,7 +121,7 @@ func (p *Pipe) Process(ctx context.Context) error {
 	return nil
 }
 
-func (p *Pipe) Found(img image.Image) (image.Point, error) {
+func (p *Pipe) Find(ctx context.Context, img image.Image) (image.Point, error) {
 	obj, err := toMat(img)
 	if err != nil {
 		return image.Pt(0, 0), fmt.Errorf("convert to mat: %w", err)
@@ -147,5 +136,10 @@ func (p *Pipe) Found(img image.Image) (image.Point, error) {
 		_ = obj.Close()
 	}()
 
-	return <-p.point, nil
+	select {
+	case <-ctx.Done():
+		return image.Pt(0, 0), ctx.Err()
+	case point := <-p.point:
+		return point, nil
+	}
 }

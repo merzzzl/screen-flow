@@ -1,7 +1,7 @@
 package actions
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"image"
 	"time"
@@ -9,19 +9,21 @@ import (
 	"github.com/merzzzl/screen-flow/device"
 )
 
-var ErrImageNotFound = errors.New("image not found")
-
-type ActionWait struct {
+type ActionWaitImage struct {
 	ImageTemplate image.Image
 	Duration      *time.Duration
 	SearchArea    *image.Rectangle
 }
 
-func (s *ActionWait) Handle(conn *device.Conn) error {
+func (s *ActionWaitImage) Handle(ctx context.Context, conn *device.Conn) error {
+	if err := conn.CheckVision(); err != nil {
+		return fmt.Errorf("need vision: %w, %w", ErrNoClints, err)
+	}
+
 	startAt := time.Now()
 
 	for {
-		point, err := conn.FindPoint(s.ImageTemplate)
+		point, err := conn.GetVision().Find(ctx, s.ImageTemplate)
 		if err != nil {
 			return fmt.Errorf("find point: %w", err)
 		}

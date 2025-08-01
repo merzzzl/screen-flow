@@ -6,15 +6,12 @@ import (
 	"image"
 	"time"
 
-	"github.com/merzzzl/scrcpy-go"
 	"github.com/merzzzl/screen-flow/actions"
 	"github.com/merzzzl/screen-flow/device"
-	"github.com/merzzzl/screen-flow/vision"
 )
 
 type Flow struct {
-	address string
-	steps   []FlowStep
+	steps []FlowStep
 }
 
 type FlowState struct {
@@ -22,21 +19,19 @@ type FlowState struct {
 	EndAt          time.Time
 	StepsCount     int
 	CompletedSteps int
-	Handshake      scrcpy.Handshake
 }
 
 type FlowStep interface {
-	Handle(conn *device.Conn) error
+	Handle(ctx context.Context, conn *device.Conn) error
 }
 
 type customAction struct {
-	handler func(conn *device.Conn) error
+	handler func(ctx context.Context, conn *device.Conn) error
 }
 
-func NewFlow(address string) *Flow {
+func NewFlow() *Flow {
 	return &Flow{
-		address: address,
-		steps:   make([]FlowStep, 0),
+		steps: make([]FlowStep, 0),
 	}
 }
 
@@ -46,11 +41,11 @@ func (f *Flow) Load(steps []FlowStep) *Flow {
 	return f
 }
 
-func (f *Flow) Run(ctx context.Context, alg vision.Algorithm, window vision.Window) (*FlowState, error) {
+func (f *Flow) Run(ctx context.Context, options ...device.Option) (*FlowState, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn, err := device.Connect(ctx, f.address, alg, window)
+	conn, err := device.Connect(ctx, options...)
 	if err != nil {
 		return nil, fmt.Errorf("connect to device: %w", err)
 	}
@@ -58,7 +53,6 @@ func (f *Flow) Run(ctx context.Context, alg vision.Algorithm, window vision.Wind
 	state := &FlowState{
 		StartAt:    time.Now(),
 		StepsCount: len(f.steps),
-		Handshake:  conn.GetHandshake(),
 	}
 
 	defer func() {
@@ -70,7 +64,7 @@ func (f *Flow) Run(ctx context.Context, alg vision.Algorithm, window vision.Wind
 			return state, ctx.Err()
 		}
 
-		if err := step.Handle(conn); err != nil {
+		if err := step.Handle(ctx, conn); err != nil {
 			return state, fmt.Errorf("step %d failed: %w", i, err)
 		}
 
@@ -80,8 +74,8 @@ func (f *Flow) Run(ctx context.Context, alg vision.Algorithm, window vision.Wind
 	return state, nil
 }
 
-func (a *customAction) Handle(conn *device.Conn) error {
-	err := a.handler(conn)
+func (a *customAction) Handle(ctx context.Context, conn *device.Conn) error {
+	err := a.handler(ctx, conn)
 	if err != nil {
 		return fmt.Errorf("custom action: %w", err)
 	}
@@ -89,15 +83,15 @@ func (a *customAction) Handle(conn *device.Conn) error {
 	return nil
 }
 
-func ActionTapXY(x, y int) FlowStep {
-	return &actions.ActionTapXY{
+func ActionTap(x, y int) FlowStep {
+	return &actions.ActionTap{
 		X: x,
 		Y: y,
 	}
 }
 
-func (f *Flow) ActionTapXY(x, y int) *Flow {
-	f.steps = append(f.steps, ActionTapXY(x, y))
+func (f *Flow) ActionTap(x, y int) *Flow {
+	f.steps = append(f.steps, ActionTap(x, y))
 
 	return f
 }
@@ -117,19 +111,6 @@ func (f *Flow) ActionSwipe(x1, y1, x2, y2 int) *Flow {
 	return f
 }
 
-func ActionSetClipboard(payload string, past bool) FlowStep {
-	return &actions.ActionSetClipboard{
-		Payload: payload,
-		Past:    past,
-	}
-}
-
-func (f *Flow) ActionSetClipboard(payload string, past bool) *Flow {
-	f.steps = append(f.steps, ActionSetClipboard(payload, past))
-
-	return f
-}
-
 func ActionType(payload string) FlowStep {
 	return &actions.ActionType{
 		Payload: payload,
@@ -142,83 +123,124 @@ func (f *Flow) ActionType(payload string) *Flow {
 	return f
 }
 
-func ActionKeyboard(keys []int, duration time.Duration) FlowStep {
-	return &actions.ActionKeyboard{
-		Press:    keys,
-		Duration: duration,
+func ActionKey(key int) FlowStep {
+	return &actions.ActionKey{
+		Press: key,
 	}
 }
 
-func (f *Flow) ActionKeyboard(keys []int, duration time.Duration) *Flow {
-	f.steps = append(f.steps, ActionKeyboard(keys, duration))
+func (f *Flow) ActionKey(key int) *Flow {
+	f.steps = append(f.steps, ActionKey(key))
 
 	return f
 }
 
-func ActionTapImage(img image.Image, wait bool, area *image.Rectangle, dur *time.Duration) FlowStep {
+func ActionTapImage(img image.Image, area *image.Rectangle, dur time.Duration) FlowStep {
 	return &actions.ActionTapImage{
 		ImageTemplate: img,
 		Duration:      dur,
 		SearchArea:    area,
-		Wait:          wait,
 	}
 }
 
-func (f *Flow) ActionTapImage(img image.Image, wait bool, area *image.Rectangle, dur *time.Duration) *Flow {
-	f.steps = append(f.steps, ActionTapImage(img, wait, area, dur))
+func (f *Flow) ActionTapImage(img image.Image, area *image.Rectangle, dur time.Duration) *Flow {
+	f.steps = append(f.steps, ActionTapImage(img, area, dur))
 
 	return f
 }
 
-func ActionSwipeImage(img image.Image, h, w int, wait bool, area *image.Rectangle, dur *time.Duration) FlowStep {
-	return &actions.StepActionSwipeImage{
+func ActionTapElement(regexp, uniqid string, dur time.Duration) FlowStep {
+	return &actions.ActionTapElement{
+		Regexp:   regexp,
+		UniqueID: uniqid,
+		Duration: dur,
+	}
+}
+
+func (f *Flow) ActionTapElement(regexp, uniqid string, dur time.Duration) *Flow {
+	f.steps = append(f.steps, ActionTapElement(regexp, uniqid, dur))
+
+	return f
+}
+
+func ActionSwipeImage(img image.Image, h, w int, area *image.Rectangle, dur time.Duration) FlowStep {
+	return &actions.ActionSwipeImage{
 		ImageTemplate: img,
 		H:             h,
 		W:             w,
 		Duration:      dur,
 		SearchArea:    area,
-		Wait:          wait,
 	}
 }
 
-func (f *Flow) ActionSwipeImage(img image.Image, h, w int, wait bool, area *image.Rectangle, dur *time.Duration) *Flow {
-	f.steps = append(f.steps, ActionSwipeImage(img, h, w, wait, area, dur))
+func (f *Flow) ActionSwipeImage(img image.Image, h, w int, area *image.Rectangle, dur time.Duration) *Flow {
+	f.steps = append(f.steps, ActionSwipeImage(img, h, w, area, dur))
 
 	return f
 }
 
-func ActionFunc(fn func(conn *device.Conn) error) FlowStep {
+func ActionSwipeElement(regexp, uniqid string, h, w int, dur time.Duration) FlowStep {
+	return &actions.ActionSwipeElement{
+		Regexp:   regexp,
+		UniqueID: uniqid,
+		H:        h,
+		W:        w,
+		Duration: dur,
+	}
+}
+
+func (f *Flow) ActionSwipeElement(regexp, uniqid string, h, w int, dur time.Duration) *Flow {
+	f.steps = append(f.steps, ActionSwipeElement(regexp, uniqid, h, w, dur))
+
+	return f
+}
+
+func ActionFunc(fn func(ctx context.Context, conn *device.Conn) error) FlowStep {
 	return &customAction{handler: fn}
 }
 
-func (f *Flow) ActionFunc(fn func(conn *device.Conn) error) *Flow {
+func (f *Flow) ActionFunc(fn func(ctx context.Context, conn *device.Conn) error) *Flow {
 	f.steps = append(f.steps, ActionFunc(fn))
 
 	return f
 }
 
-func ActionWait(img image.Image, area *image.Rectangle, dur *time.Duration) FlowStep {
-	return &actions.ActionWait{
+func ActionWaitImage(img image.Image, area *image.Rectangle, dur *time.Duration) FlowStep {
+	return &actions.ActionWaitImage{
 		ImageTemplate: img,
 		SearchArea:    area,
 		Duration:      dur,
 	}
 }
 
-func (f *Flow) ActionWait(img image.Image, area *image.Rectangle, dur *time.Duration) *Flow {
-	f.steps = append(f.steps, ActionWait(img, area, dur))
+func (f *Flow) ActionWaitImage(img image.Image, area *image.Rectangle, dur *time.Duration) *Flow {
+	f.steps = append(f.steps, ActionWaitImage(img, area, dur))
 
 	return f
 }
 
-func ActionDelay(dur time.Duration) FlowStep {
-	return &actions.ActionDelay{
+func ActionWaitElement(regexp, uniqid string, dur *time.Duration) FlowStep {
+	return &actions.ActionWaitElement{
+		Regexp:   regexp,
+		UniqueID: uniqid,
 		Duration: dur,
 	}
 }
 
-func (f *Flow) ActionDelay(dur time.Duration) *Flow {
-	f.steps = append(f.steps, ActionDelay(dur))
+func (f *Flow) ActionWaitElement(regexp, uniqid string, dur *time.Duration) *Flow {
+	f.steps = append(f.steps, ActionWaitElement(regexp, uniqid, dur))
+
+	return f
+}
+
+func ActionWait(dur time.Duration) FlowStep {
+	return &actions.ActionWait{
+		Duration: dur,
+	}
+}
+
+func (f *Flow) ActionWait(dur time.Duration) *Flow {
+	f.steps = append(f.steps, ActionWait(dur))
 
 	return f
 }

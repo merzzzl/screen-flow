@@ -11,6 +11,7 @@ import (
 	"time"
 
 	screenflow "github.com/merzzzl/screen-flow"
+	"github.com/merzzzl/screen-flow/device"
 	"github.com/merzzzl/screen-flow/vision"
 	"gocv.io/x/gocv"
 )
@@ -36,24 +37,19 @@ func main() {
 		panic(err)
 	}
 
-	flow := screenflow.NewFlow("127.0.0.1:10000").
-		ActionTapImage(chromeImage, true, nil, nil).
-		ActionTapImage(searchImage, true, nil, nil).
-		ActionWait(enterImage, nil, nil).
+	flow := screenflow.NewFlow().
+		ActionTapImage(chromeImage, nil, time.Millisecond*50).
+		ActionTapImage(searchImage, nil, time.Millisecond*50).
+		ActionWaitImage(enterImage, nil, nil).
 		ActionType("Hello, world!").
-		ActionTapImage(enterImage, true, nil, nil).
-		ActionDelay(time.Second * 2)
-
-	s, _ := flow.ToYAML()
-	_ = flow.FromYAML(s)
-
-	log.Println(s)
+		ActionTapImage(enterImage, nil, time.Millisecond*50).
+		ActionWait(time.Second * 2)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go func() {
-		state, err := flow.Run(ctx, vision.AlgorithmSIFT, window)
+		state, err := flow.Run(ctx, device.WithSCRCPY("127.0.0.1:10000"), device.WithVision(vision.AlgorithmSURF))
 		if err != nil {
 			log.Printf("run flow: %v", err)
 		}
