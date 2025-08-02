@@ -3,7 +3,7 @@ module github.com/merzzzl/screen-flow
 go 1.23.6
 
 require (
-	github.com/merzzzl/accessibility-bridge-go v1.1.1
+	github.com/merzzzl/accessibility-bridge-go v1.1.5
 	github.com/merzzzl/scrcpy-go v1.0.0
 	gocv.io/x/gocv v0.41.0
 	google.golang.org/grpc v1.74.2
