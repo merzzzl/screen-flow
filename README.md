@@ -37,8 +37,7 @@ type text, verify that the screen stopped changing …* — all from pure Go.
 | ---------------------------------------------- | ------------------------------------------ |
 | `ActionTap(x, y)`                              | Tap at absolute coordinates                |
 | `ActionSwipe(x1, y1, x2, y2)`                  | Swipe from point A to B                    |
-| `ActionKeyboard(keys, dur)`                    | Press keycodes with duration               |
-| `ActionSetClipboard(str, paste)`               | Set clipboard text and optionally paste it |
+| `ActionKey(key)`                               | Press keycodes with duration               |
 | `ActionType(str)`                              | Type UTF‑8 string text                     |
 | `ActionTapImage(img, area, dur)`               | Tap to center of image                     |
 | `ActionSwipeImage(img, h, w, area, dur)`       | Swipe from image anchor (H,W offset)       |
