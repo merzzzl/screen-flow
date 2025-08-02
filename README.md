@@ -35,15 +35,18 @@ type text, verify that the screen stopped changing …* — all from pure Go.
 
 | Step                                           | Description                                |
 | ---------------------------------------------- | ------------------------------------------ |
-| `ActionTapXY(x, y)`                            | Tap at absolute coordinates                |
+| `ActionTap(x, y)`                              | Tap at absolute coordinates                |
 | `ActionSwipe(x1, y1, x2, y2)`                  | Swipe from point A to B                    |
 | `ActionKeyboard(keys, dur)`                    | Press keycodes with duration               |
 | `ActionSetClipboard(str, paste)`               | Set clipboard text and optionally paste it |
 | `ActionType(str)`                              | Type UTF‑8 string text                     |
-| `ActionTapImage(img, wait, area, dur)`         | Wait for image on screen and tap center    |
-| `ActionSwipeImage(img, h, w, wait, area, dur)` | Swipe from image anchor (H,W offset)       |
-| `ActionWait(img, area, dur)`                   | Wait until image appears on screen         |
-| `ActionDelay(dur)`                             | Sleep for duration                         |
+| `ActionTapImage(img, area, dur)`               | Tap to center of image                     |
+| `ActionSwipeImage(img, h, w, area, dur)`       | Swipe from image anchor (H,W offset)       |
+| `ActionWaitImage(img, area, dur)`              | Wait until image appears on screen         |
+| `ActionTapElement(regexp, uniqid, dur)`        | Tap to center of image                     |
+| `ActionSwipeElement(regexp, uniqid, h, w, dur)`| Swipe from image anchor (H,W offset)       |
+| `ActionWaitElement(regexp, uniqid, dur)`       | Wait until image appears on screen         |
+| `ActionWait(dur)`                              | Sleep for duration                         |
 | `ActionFunc(fn)`                               | Execute custom Go callback                 |
 
 ## 🚀  Getting started
