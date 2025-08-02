@@ -1,6 +1,6 @@
 # screen‑flow
 
-screen‑flow is a **UI automation & testing helper** built on top of [`scrcpy‑go`](https://github.com/merzzzl/scrcpy-go).  
+screen‑flow is a **UI automation & testing helper** built on top of [`scrcpy‑go`](https://github.com/merzzzl/scrcpy-go) or [`accessibility-bridge`](https://github.com/merzzzl/accessibility-bridge).  
 
 It lets you describe interaction flows as a chain of steps driven by
 computer‑vision template matching: *tap that button, wait for the dialog,
@@ -26,7 +26,8 @@ type text, verify that the screen stopped changing …* — all from pure Go.
   Per‑step `DelayBefore` / `DelayAfter`.
 
 - **Powered by**  
-  - [scrcpy-go](https://github.com/merzzzl/scrcpy-go) for control & video  
+  - [scrcpy-go](https://github.com/merzzzl/scrcpy-go) for control & video
+  - [accessibility-bridge-go](https://github.com/merzzzl/accessibility-bridge-go) for control 
   - [GoCV](https://gocv.io/) for template matching  
   - [FFmpeg](https://ffmpeg.org/) for H.264 decoding
 
