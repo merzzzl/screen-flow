@@ -1,6 +1,6 @@
 # screen‑flow
 
-screen‑flow is a **UI automation & testing helper** built on top of [`scrcpy‑go`](https://github.com/merzzzl/scrcpy-go) or [`accessibility-bridge`](https://github.com/merzzzl/accessibility-bridge).  
+screen‑flow is a **UI automation & testing helper** built on top of [`scrcpy‑go`](https://github.com/merzzzl/scrcpy-go) or [`accessibility-bridge-go`](https://github.com/merzzzl/accessibility-bridge-go).  
 
 It lets you describe interaction flows as a chain of steps driven by
 computer‑vision template matching: *tap that button, wait for the dialog,
